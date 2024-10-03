@@ -154,6 +154,3 @@ app.post('/api/run', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-
-// TODO: 4. list and retrieve thread
