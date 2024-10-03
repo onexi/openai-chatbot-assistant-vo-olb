@@ -7,24 +7,41 @@
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
       rel="stylesheet"
-    />
+    />    
     <style>
       body {
         background-color: #121212;
         color: #ffffff;
       }
       .message-container {
-        height: 200px;
-        overflow-y: scroll;
+        height: 300px;
+        overflow-y: auto;
         border: 1px solid #444;
         padding: 10px;
         margin-bottom: 15px;
       }
-      .message.user {
-        color: #0dcaf0;
+
+      .message {
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 20px; /* Add space between messages */
+        max-width: 60%;
+        word-wrap: break-word;
+        white-space: pre-wrap; /* Preserves newlines and spaces */
       }
+
+      .message.user {
+        background-color: #0dcaf0;
+        color: #000;
+        text-align: right;
+        margin-left: auto; /* Align user messages to the right */
+      }
+
       .message.assistant {
-        color: #ffc107;
+        background-color: #ffc107;
+        color: #000;
+        text-align: left;
+        margin-right: auto; /* Align assistant messages to the left */
       }
     </style>
   </head>
@@ -33,46 +50,62 @@
       <h1 class="text-center">Assistant Chat</h1>
 
       <!-- Assistant Selection -->
-      <div class="mb-3">
+      <div class="mb-5">
         <label for="assistantSelect" class="form-label">Select Assistant</label>
-        <input
-          id="assistant_name"
-          type="text"
-          value="asst_2JWXaEmwhgVBotP0QDjH9Dbm"
-        />
-        <button
-          id="get_assistant"
-          class="btn btn-primary"
-          onclick="getAssistant()"
-        >
-          Get Assistant
-        </button>
+        <div class="input-group mb-3">
+          <select id="assistantSelect" class="form-select">
+            <!-- Placeholder for available assistants to be populated by scripts.js -->
+          </select>
+          <button id="get_assistant" class="btn btn-primary" onclick="getAssistant()">
+            Get Assistant
+          </button>
+        </div>
       </div>
 
-      <!-- Create New Thread Button -->
-      <div class="mb-3">
-        <button id="newThreadBtn" class="btn btn-primary" onclick="getThread()">
-          Create New Thread
-        </button>
+      <!-- Thread Selection -->
+      <div class="mb-5">
+        <label for="threadSelect" class="form-label">Select Thread</label>
+        <div class="input-group mb-3">
+          <select id="threadSelect" class="form-select">
+            <!-- Placeholder for available threads to be populated by scripts.js -->
+          </select>
+          <button id="get_thread" class="btn btn-primary" onclick="getThread()">
+            Get Thread
+          </button>
+        </div>
       </div>
 
-      <!-- Message Display -->
-      <div class="message-container" id="message-container"></div>
+      <!-- Response and Question Box -->
+      <div class="mb-5">
+        <h4>Response</h4>
+        <div class="message-container" id="messages">
+          <!-- Placeholder for assistant's latest reply -->
+        </div>
 
-      <!-- Message Input -->
-      <div class="input-group mb-3">
-        <button id="sendBtn" class="btn btn-success" onclick="getResponse()">
-          Send
-        </button>
-        <input
-          type="text"
-          id="messageInput"
-          class="form-control"
-          placeholder="Type your message..."
-        />
+        <!-- Message Input -->
+        <div class="input-group">
+          <input
+            type="text"
+            id="messageInput"
+            class="form-control"
+            placeholder="Ask me anything!"
+          />
+          <button id="sendBtn" class="btn btn-success" onclick="getResponse()">
+            Send
+          </button>
+        </div>
       </div>
+
+      <!-- Context Window (Chat History) -->
+      <br>
+      <div class="mb-5">
+        <h4>Conversation History</h4>
+        <div class="message-container" id="message-container">
+          <!-- Placeholder for displaying all messages (conversation history) -->
+        </div>
+      </div>
+
     </div>
-
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom Script -->

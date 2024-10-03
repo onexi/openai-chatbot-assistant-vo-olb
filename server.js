@@ -10,6 +10,7 @@ import bodyParser from 'body-parser';
 
 const app = express();
 const PORT = 3000;
+const LIMIT = 10;
 
 // Middleware
 app.use(cors());
@@ -20,88 +21,130 @@ app.use(express.static('public')); // Serve static files from the 'public' direc
 let state = {
   assistant_id: null,
   assistant_name: null,
-  threadId: null,
+  thread_id: null,
   messages: [],
 };
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-// Route to get the list of Assistants
-app.post('/api/assistants', async (req, res) => {
+
+
+// Route to list all Assistants
+app.get('/api/assistants/list', async (req, res) => {
+  try {
+    let response = await openai.beta.assistants.list({
+      limit: LIMIT
+    });
+    
+    res.json({ assistant_id_list: response.data });
+  }
+  catch (error) {
+    console.error('Error listing assistants:', error);
+    res.status(500).json({ error: 'Failed to list assistants' });
+  }
+});
+
+// Route to retrieve an Assistant
+app.post('/api/assistants/:assistant_id', async (req, res) => {
   let assistant_id = req.body.name;
-    try {
-        let myAssistant = await openai.beta.assistants.retrieve(
-          assistant_id
-        );
-        console.log(myAssistant);
-              // Extract the list of assistants from 'data.data'
-        state.assistant_id = myAssistant.id; // Updated line
-        state.assistant_name = myAssistant.name; // Updated line
-        res.status(200).json(state);
-      }
-      catch{
-        if (!myAssistant.ok) {
-          const errorText = await myAssistant.text;
-          console.error('Error fetching assistants:', errorText);
-          return res.status(myAssistant.status).json({ error: 'Failed to fetch assistants' });
-        }
-      }
-  });
-  
+  try {
+    let myAssistant = await openai.beta.assistants.retrieve(
+      assistant_id
+    );
+
+    state.assistant_id = myAssistant.id;
+    state.assistant_name = myAssistant.name;
+    state.thread_id = null;
+    state.messages = [];
+    res.status(200).json(state);
+  }
+  catch (error) {
+    console.error('Error fetching assistants:', error);
+    res.status(500).json({ error: 'Failed to fetch assistants' });
+  }
+});
+
+// Route to list all Threads created for an Assistant
+// Unimplemented (it seems that for now we cannot list or manage threads in the OpenAI API)
+// app.get('/api/threads/list', async (req, res) => {
+//   const assistantId = state.assistant_id;
+//   try {
+//     let response = await openai.beta.threads.list({
+//       assistant_id: assistantId, 
+//       limit: LIMIT
+//     });
+    
+//     res.json({ thread_id_list: response.data });
+//   }
+//   catch (error) {
+//     console.error('Error listing threads:', error);
+//     res.status(500).json({ error: 'Failed to list threads' });
+//   }
+// });
 
 // Route to create a new Thread
-app.post('/api/threads', async (req, res) => {
-  const { assistantId } = req.body;
+app.post('/api/threads/new', async (req, res) => {
   try {
-    let response = await openai.beta.threads.create()
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error creating thread:', errorText);
-      return res.status(response.status).json({ error: 'Failed to create thread' });
-    }
+    let thread = await openai.beta.threads.create();
 
-    const data = await response.json();
-    state.threadId = data.id;
+    state.thread_id = thread.id;
     state.messages = []; // Reset messages
-    res.json({ threadId: state.threadId });
-  } catch (error) {
+    res.json({ thread_id: state.thread_id });
+  }
+  catch (error) {
     console.error('Error creating thread:', error);
     res.status(500).json({ error: 'Failed to create thread' });
   }
 });
 
+// Route to retrieve a Thread
+// Unimplemented (it seems that for now we cannot list or manage threads in the OpenAI API)
+// app.post('/api/threads/:thread_id', async (req, res) => {
+//   const { thread_id } = req.params;
+//   try {
+//     let response = await openai.beta.threads.messages.list(thread_id);
+
+//     state.thread_id = thread_id;
+//     state.messages = response.data;
+//     res.json({ messages: response.data });
+//   }
+//   catch (error) {
+//     console.error('Error retrieving thread message:', error);
+//     res.status(500).json({ error: 'Failed to retrieve thread message' });
+//   }
+// });
+
 // Route to send a message and run the Assistant
 app.post('/api/run', async (req, res) => {
+  const thread_id = state.thread_id;
   const { message } = req.body;
-  state.messages.push({ role: 'user', content: message });
+  state.messages.unshift({ role: 'user', content: message });
   try {
-    await openai.beta.threads.messages.create(thread_id,
-        {
-            role: "user",
-            content: message,
-        })
-    // run and poll thread V2 API feature
+    // Add user message to thread
+    await openai.beta.threads.messages.create(thread_id, {
+      role: "user",
+      content: message,
+    });
+
+    // Run and poll thread V2 API feature
     let run = await openai.beta.threads.runs.createAndPoll(thread_id, {
         assistant_id: state.assistant_id
     })
-    let run_id = run.id;
-    state.run_id = run_id;
+    
+    // Get assistant message and update state
+    let response = await openai.beta.threads.messages.list(thread_id);
+    console.log(JSON.stringify(response.data.slice(0, 2), null, 2));
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error running assistant:', errorText);
-      return res.status(response.status).json({ error: 'Failed to run assistant' });
+    let assistant_message = response.data.find((msg) => msg.role === 'assistant').content[0].text.value
+    
+    if (assistant_message) {
+      state.messages.unshift({ role: 'assistant', content: assistant_message});
     }
-    let messages = await openai.beta.threads.messages.list(thread_id);
-    let all_messages = [];
-    let role = "";
-    let content = "";
-   
-    if (assistantMessage) {
-      state.messages.push(assistantMessage);
-    }
+
     res.json({ messages: state.messages });
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error running assistant:', error);
     res.status(500).json({ error: 'Failed to run assistant' });
   }
@@ -111,3 +154,6 @@ app.post('/api/run', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+
+// TODO: 4. list and retrieve thread
