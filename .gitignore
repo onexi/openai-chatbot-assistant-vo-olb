@@ -128,3 +128,5 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+PS03_V2_OpenAIAssistant001.docx
